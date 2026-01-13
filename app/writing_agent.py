@@ -10,18 +10,18 @@ from openai.error import RateLimitError
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# ================= PATH CONFIG =================
+# ================= PATH CONFIG (FIXED) =================
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-RESEARCH_JSON_PATH = os.path.join(
-    BASE_DIR,
-    "app",
-    "agent_outputs",
-    "research_brief.json"
-)
+AGENT_OUTPUTS_DIR = os.path.join(BASE_DIR, "agent_outputs")
+RESEARCH_JSON_PATH = os.path.join(AGENT_OUTPUTS_DIR, "research_brief.json")
 
 OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
 RATE_LIMIT_WAIT = 20
+
+# Ensure folders exist
+os.makedirs(AGENT_OUTPUTS_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # ================= UTILS =================
 def call_openai_with_retry(fn, retries=5):
@@ -40,7 +40,11 @@ def extract_json(text):
 
 def load_research_brief():
     if not os.path.exists(RESEARCH_JSON_PATH):
-        raise FileNotFoundError(f"❌ Missing research file: {RESEARCH_JSON_PATH}")
+        raise FileNotFoundError(
+            f"❌ Missing research file:\n{RESEARCH_JSON_PATH}\n"
+            f"👉 Ensure research agent ran first"
+        )
+
     with open(RESEARCH_JSON_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
@@ -112,6 +116,7 @@ Return ONLY JSON:
 
         data = extract_json(res["choices"][0]["message"]["content"])
         article.sections = data["sections"]
+
         print("🗂 Sections created dynamically")
 
 class WritingAgent:
@@ -170,8 +175,6 @@ class OutputAgent:
     def act(self, article):
         if article.done:
             return
-
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
 
         path = os.path.join(OUTPUT_DIR, "article.md")
         with open(path, "w", encoding="utf-8") as f:
