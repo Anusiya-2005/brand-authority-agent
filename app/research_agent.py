@@ -153,6 +153,10 @@ def save_research_brief(research_brief):
         json.dump(research_brief, f, indent=2)
     return path
 
+# ================= RESOURCE LINK HELPER =================
+def generate_resource_link(query):
+    return f"https://www.google.com/search?q={query.replace(' ', '+')}"
+
 # ================= STREAMLIT UI =================
 st.set_page_config(page_title="SERP Research Agent", layout="wide")
 st.title("🔍 SERP Research Agent – Writing Agent Input Generator")
@@ -174,6 +178,30 @@ if uploaded_file:
             output_path = save_research_brief(research_brief)
 
         st.subheader("📊 Research Brief (Output for Writing Agent)")
-        st.json(research_brief)
+
+        # 🎯 Primary Keyword
+        pk = research_brief["primary_keyword"]
+        st.markdown(f"### 🎯 Primary Keyword\n**{pk}** [🔗]({generate_resource_link(pk)})")
+
+        # 🔑 Secondary Keywords
+        st.markdown("### 🔑 Secondary Keywords")
+        for kw in research_brief["secondary_keywords"]:
+            st.markdown(f"- {kw} [🔗]({generate_resource_link(kw)})")
+
+        # ❓ Question Keywords
+        st.markdown("### ❓ Question Keywords")
+        for q in research_brief["question_keywords"]:
+            st.markdown(f"- {q} [🔗]({generate_resource_link(q)})")
+
+        # 🧠 Content Strategy
+        st.markdown(f"### 🧠 Content Angle\n{research_brief['content_angle']}")
+
+        st.markdown("### 🧱 Recommended Structure")
+        for sec in research_brief["recommended_structure"]:
+            st.markdown(f"- {sec}")
+
+        st.markdown(f"### 📏 Word Count\n{research_brief['recommended_word_count']}")
+        st.markdown(f"### 🚀 Ranking Feasibility\n{research_brief['ranking_feasibility']}")
+        st.markdown(f"### ✍️ Writing Instructions\n{research_brief['writing_instructions']}")
 
         st.success(f"✅ Research Brief saved at: {output_path}")
