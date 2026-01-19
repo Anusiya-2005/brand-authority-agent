@@ -161,9 +161,7 @@ def generate_resource_link(query):
 st.set_page_config(page_title="SERP Research Agent", layout="wide")
 st.title("🔍 SERP Research Agent ")
 
-uploaded_file = st.file_uploader("Upload PDF or TXT document (optional)")
-
-st.markdown("**Or provide context manually:**")
+st.markdown("**provide context manually:**")
 topic = st.text_input("Context :", placeholder="Eg: AI for school students")
 target_audience = st.text_input("Target Audience :", placeholder="Eg: Kids aged 10–14")
 content_goal = st.selectbox(
@@ -172,6 +170,8 @@ content_goal = st.selectbox(
 )
 brand = st.text_input("Brand :", placeholder="Eg: AstroKids")
 region = st.text_input("Region :", placeholder="Eg: India")
+
+uploaded_file = st.file_uploader("Upload PDF or TXT document (optional)")
 if st.button("🚀 Run SERP Research Agent"):
 
     # Decide input source
@@ -204,26 +204,26 @@ if st.button("🚀 Run SERP Research Agent"):
         research_brief = generate_research_brief(context, serp_analysis)
         output_path = save_research_brief(research_brief)
 
-    st.subheader("📊 Research Brief (Output for Writing Agent)")
+    with st.expander("📊 Research Brief (Output for Writing Agent)", expanded=False):
 
-    pk = research_brief["primary_keyword"]
-    st.markdown(f"### 🎯 Primary Keyword\n**{pk}** [🔗]({generate_resource_link(pk)})")
+     pk = research_brief["primary_keyword"]
+     st.markdown(f"### 🎯 Primary Keyword\n**{pk}** [🔗]({generate_resource_link(pk)})")
 
-    st.markdown("### 🔑 Secondary Keywords")
-    for kw in research_brief["secondary_keywords"]:
+     st.markdown("### 🔑 Secondary Keywords")
+     for kw in research_brief["secondary_keywords"]:
         st.markdown(f"- {kw} [🔗]({generate_resource_link(kw)})")
 
-    st.markdown("### ❓ Question Keywords")
-    for q in research_brief["question_keywords"]:
+     st.markdown("### ❓ Question Keywords")
+     for q in research_brief["question_keywords"]:
         st.markdown(f"- {q} [🔗]({generate_resource_link(q)})")
 
-    st.markdown(f"### 🧠 Content Angle\n{research_brief['content_angle']}")
-    st.markdown("### 🧱 Recommended Structure")
-    for sec in research_brief["recommended_structure"]:
+     st.markdown(f"### 🧠 Content Angle\n{research_brief['content_angle']}")
+     st.markdown("### 🧱 Recommended Structure")
+     for sec in research_brief["recommended_structure"]:
         st.markdown(f"- {sec}")
 
-    st.markdown(f"### 📏 Word Count\n{research_brief['recommended_word_count']}")
-    st.markdown(f"### 🚀 Ranking Feasibility\n{research_brief['ranking_feasibility']}")
-    st.markdown(f"### ✍️ Writing Instructions\n{research_brief['writing_instructions']}")
+     st.markdown(f"### 📏 Word Count\n{research_brief['recommended_word_count']}")
+     st.markdown(f"### 🚀 Ranking Feasibility\n{research_brief['ranking_feasibility']}")
+     st.markdown(f"### ✍️ Writing Instructions\n{research_brief['writing_instructions']}")
 
-    st.success(f"✅ Research Brief saved at: {output_path}")
+     st.success(f"✅ Research Brief saved at: {output_path}")
