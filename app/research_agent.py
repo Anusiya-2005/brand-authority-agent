@@ -113,8 +113,31 @@ SERP DATA:
 
     return json.loads(res["choices"][0]["message"]["content"])
 
+# ================= BLOG ANGLE GENERATOR =================
+def generate_blog_angles(context, count):
+    prompt = f"""
+You are a content strategy expert.
+
+Generate {count} DISTINCT blog angles for the topic below.
+Each angle must target a different search intent or sub-topic.
+
+Return ONLY JSON:
+{{
+  "angles": []
+}}
+
+Context:
+{json.dumps(context, indent=2)}
+"""
+    res = call_openai(
+        prompt=prompt,
+        system_role="Content ideation agent. JSON only.",
+        temperature=0.4
+    )
+    return json.loads(res["choices"][0]["message"]["content"])["angles"]
+
 # ================= FINAL RESEARCH BRIEF AGENT =================
-def generate_research_brief(context, serp_analysis):
+def generate_research_brief(context, serp_analysis, blog_angle=None):
     prompt = f"""
 Generate a SERP Research Brief for a Writing Agent.
 
@@ -135,22 +158,23 @@ Context:
 
 SERP Analysis:
 {json.dumps(serp_analysis, indent=2)}
-"""
 
+Blog Angle:
+{blog_angle if blog_angle else ""}
+"""
     res = call_openai(
         prompt=prompt,
         system_role="Content strategy agent. JSON only.",
         temperature=0.25
     )
-
     return json.loads(res["choices"][0]["message"]["content"])
 
 # ================= SAVE OUTPUT =================
-def save_research_brief(research_brief):
+def save_research_briefs(research_briefs):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    path = f"{OUTPUT_DIR}/research_brief.json"
+    path = f"{OUTPUT_DIR}/research_briefs.json"
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(research_brief, f, indent=2)
+        json.dump(research_briefs, f, indent=2)
     return path
 
 # ================= RESOURCE LINK HELPER =================
@@ -169,10 +193,17 @@ content_goal = st.selectbox(
     ["Educational", "Informational", "Commercial", "Brand Authority"]
 )
 brand = st.text_input("Brand :", placeholder="Eg: AstroKids")
+blog_count = st.radio(
+    label="Number of Blogs to Generate :",
+    options=["1", "2", "3", "4", "5"],
+    horizontal=True,
+)
 region = st.text_input("Region :", placeholder="Eg: India")
 
 uploaded_file = st.file_uploader("Upload PDF or TXT document (optional)")
 if st.button("🚀 Run SERP Research Agent"):
+
+    blog_count_int = int(blog_count)
 
     # Decide input source
     if uploaded_file:
@@ -201,29 +232,40 @@ if st.button("🚀 Run SERP Research Agent"):
     with st.spinner("Analyzing SERP & competitors..."):
         serp_data = fetch_serp(context["topic"])
         serp_analysis = analyze_serp_with_llm(serp_data)
-        research_brief = generate_research_brief(context, serp_analysis)
-        output_path = save_research_brief(research_brief)
 
-    with st.expander("📊 Research Brief (Output for Writing Agent)", expanded=False):
+        # Generate blog angles and research briefs
+        blog_angles = generate_blog_angles(context, blog_count_int)
+        all_research_briefs = []
 
-     pk = research_brief["primary_keyword"]
-     st.markdown(f"### 🎯 Primary Keyword\n**{pk}** [🔗]({generate_resource_link(pk)})")
+        for idx, angle in enumerate(blog_angles, start=1):
+            brief = generate_research_brief(context, serp_analysis, angle)
+            brief["blog_number"] = idx
+            brief["blog_angle"] = angle
+            all_research_briefs.append(brief)
 
-     st.markdown("### 🔑 Secondary Keywords")
-     for kw in research_brief["secondary_keywords"]:
-        st.markdown(f"- {kw} [🔗]({generate_resource_link(kw)})")
+        output_path = save_research_briefs(all_research_briefs)
 
-     st.markdown("### ❓ Question Keywords")
-     for q in research_brief["question_keywords"]:
-        st.markdown(f"- {q} [🔗]({generate_resource_link(q)})")
+    with st.expander("📊 Research Briefs (Output for Writing Agent)", expanded=False):
+        for brief in all_research_briefs:
+            st.markdown(f"## 📝 Blog {brief['blog_number']}")
+            st.markdown(f"**Angle:** {brief['blog_angle']}")
+            st.markdown(f"### 🎯 Primary Keyword\n**{brief['primary_keyword']}** [🔗]({generate_resource_link(brief['primary_keyword'])})")
 
-     st.markdown(f"### 🧠 Content Angle\n{research_brief['content_angle']}")
-     st.markdown("### 🧱 Recommended Structure")
-     for sec in research_brief["recommended_structure"]:
-        st.markdown(f"- {sec}")
+            st.markdown("### 🔑 Secondary Keywords")
+            for kw in brief["secondary_keywords"]:
+                st.markdown(f"- {kw} [🔗]({generate_resource_link(kw)})")
 
-     st.markdown(f"### 📏 Word Count\n{research_brief['recommended_word_count']}")
-     st.markdown(f"### 🚀 Ranking Feasibility\n{research_brief['ranking_feasibility']}")
-     st.markdown(f"### ✍️ Writing Instructions\n{research_brief['writing_instructions']}")
+            st.markdown("### ❓ Question Keywords")
+            for q in brief["question_keywords"]:
+                st.markdown(f"- {q} [🔗]({generate_resource_link(q)})")
 
-     st.success(f"✅ Research Brief saved at: {output_path}")
+            st.markdown(f"### 🧠 Content Angle\n{brief['content_angle']}")
+            st.markdown("### 🧱 Recommended Structure")
+            for sec in brief["recommended_structure"]:
+                st.markdown(f"- {sec}")
+
+            st.markdown(f"### 📏 Word Count\n{brief['recommended_word_count']}")
+            st.markdown(f"### 🚀 Ranking Feasibility\n{brief['ranking_feasibility']}")
+            st.markdown(f"### ✍️ Writing Instructions\n{brief['writing_instructions']}")
+
+    st.success(f"✅ Research Briefs saved at: {output_path}")
